@@ -15,7 +15,8 @@ my $viddir = $cfg->param('VideoRootDir');
 my $imgdir = $cfg->param('ImageRootDir');
 my $tmpdir = $cfg->param('TempDir');
 my $namef = $cfg->param('FileNameFormat');
-my $vcodec = $cfg->param('VideoCodec');
+my $vcodec = $cfg->param('ClipVideoCodec');
+my $acodec = $cfg->param('ClipAudioCodec');
 
 # some globals we'll use later
 my $tstamp = DateTime->now;
@@ -39,6 +40,7 @@ sub get_image {
   my $imgfile = File::Spec->catfile($imgdir, $camera, $filename);
 
   # let ffmpeg do the heavy lifting
+  # XXX should we just rely on a snapshot from the camera and fetch the URL?
   system(@ffmpeg, '-i', $stream, '-vframes', 1, $tmpfile);
 
   deploy($tmpfile, $imgfile);
@@ -55,12 +57,14 @@ sub get_clip {
   my $vidfile = File::Spec->catfile($viddir, $camera, $filename);
 
   # let ffmpeg do the heavy lifting
-  system(@ffmpeg, '-i', $stream, '-t', $duration, '-vcodec', $vcodec, $tmpfile);
+  system(@ffmpeg, '-t', $duration, '-i', $stream,
+    '-vcodec', $vcodec, '-acodec', $acodec,
+    $tmpfile
+  );
 
   deploy($tmpfile, $vidfile);
-
-  # TODO update current.jpg (symlink?) to new snapshot
 }
 
 get_image('front-porch-test', 'rtsp://192.168.0.101/stream1');
 get_clip('front-porch-test', 'rtsp://192.168.0.101/stream1');
+
