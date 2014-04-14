@@ -5,7 +5,6 @@ use Config::General;
 use Data::Dumper;
 use DateTime;
 use File::Spec;
-use File::Basename;
 use Getopt::Long;
 
 # some globals we'll use later
@@ -29,21 +28,40 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
-sub deploy {
-  use File::Path;
-  use File::Copy;
+sub camparam {
+  return unless defined wantarray;
 
-  my ($source, $dest) = @_;
+  my $camera = shift;
+  my @params = ( );
 
-  mkpath(dirname($dest));
-  move($source, $dest);
+  foreach my $key (@_) {
+    push(@params, $config{Camera}{$camera}{$key} || $config{$key});
+  }
+
+  return (wantarray) ? @params : $params[0];
 }
 
 #-------------------------------------------------------------------------------
-sub camparam {
-  my ($camera, $param) = @_;
+sub camconfig {
+  my $camera = shift;
+  my (%params) = @_;
 
-  return $config{Camera}{$camera}{$param} || $config{$param};
+  foreach (keys %params) {
+    ${$params{$_}} = $config{Camera}{$camera}{$_} || $config{$_};
+  }
+}
+
+#-------------------------------------------------------------------------------
+sub deploy {
+  use File::Basename;
+  use File::Copy;
+  use File::Path;
+
+  my ($source, $dest) = @_;
+  #printf("DEPLOY %s => %s\n", $source, $dest);
+
+  mkpath(dirname($dest));
+  move($source, $dest);
 }
 
 #-------------------------------------------------------------------------------
@@ -51,6 +69,7 @@ sub download {
   use LWP::Simple;
 
   my ($url, $file) = @_;
+  #printf("DOWNLOAD %s => %s\n", $url, $file);
 
   my $status = getstore($url, $file);
 
@@ -70,22 +89,23 @@ sub ffmpeg {
 sub do_snap {
   my ($camera) = @_;
 
-  my $namef = camparam($camera, 'FileNameFormat');
+  my ($namef, $imgdir, $imgurl, $stream, $tmpdir);
+
+  camconfig($camera,
+    'FileNameFormat' => \$namef,
+    'ImageURL' => \$imgurl,
+    'StreamURL' => \$stream,
+    'ImageRootDir' => \$imgdir,
+    'TempDir' => \$tmpdir
+  );
+
   my $filename = $tstamp->strftime($namef) . '.jpg';
-
-  my $imgdir = camparam($camera, 'ImageRootDir');
   my $imgfile = File::Spec->catfile($imgdir, $camera, $filename);
-
-  my $tmpdir = camparam($camera, 'TempDir');
   my $tmpfile = File::Spec->catfile($tmpdir, $filename);
-
-  my $imgurl = camparam($camera, 'ImageURL');
 
   if ($imgurl) {
     download($imgurl, $tmpfile);
-
   } else {
-    my $stream = camparam($camera, 'StreamURL');
     ffmpeg('-i', $stream, '-vframes', 1, $tmpfile);
   }
 
@@ -98,20 +118,22 @@ sub do_snap {
 sub do_clip {
   my ($camera) = @_;
 
-  my $namef = camparam($camera, 'FileNameFormat');
-  my $suffix = camparam($camera, 'ClipFileType');
+  my ($namef, $suffix, $viddir, $stream, $length, $acodec, $vcodec, $tmpdir);
+
+  camconfig($camera,
+    'FileNameFormat' => \$namef,
+    'ClipFileType' => \$suffix,
+    'ClipDuration' => \$length,
+    'ClipAudioCodec' => \$acodec,
+    'ClipVideoCodec' => \$vcodec,
+    'StreamURL' => \$stream,
+    'VideoRootDir' => \$viddir,
+    'TempDir' => \$tmpdir
+  );
+
   my $filename = $tstamp->strftime($namef) . '.' . $suffix;
-
-  my $viddir = camparam($camera, 'VideoRootDir');
   my $vidfile = File::Spec->catfile($viddir, $camera, $filename);
-
-  my $tmpdir = camparam($camera, 'TempDir');
   my $tmpfile = File::Spec->catfile($tmpdir, $filename);
-
-  my $stream = camparam($camera, 'StreamURL');
-  my $length = camparam($camera, 'ClipDuration');
-  my $acodec = camparam($camera, 'ClipVideoCodec');
-  my $vcodec = camparam($camera, 'ClipAudioCodec');
 
   # let ffmpeg do the heavy lifting
   ffmpeg('-t', $length, '-i', $stream,
@@ -128,17 +150,21 @@ sub do_prune {
 
   my ($camera) = @_;
 
+  my ($imgdir, $viddir, $days);
+
+  camconfig($camera,
+    'ImageRootDir' => \$imgdir,
+    'VideoRootDir' => \$viddir,
+    'RetentionPeriod' => \$days
+  );
+
   my @paths = ( );
 
-  my $imgdir = camparam($camera, 'ImageRootDir');
   my $imgpath = File::Spec->catfile($imgdir, $camera);
   push(@paths, $imgpath) if -d $imgpath;
 
-  my $viddir = camparam($camera, 'VideoRootDir');
   my $vidpath = File::Spec->catfile($viddir, $camera);
   push(@paths, $vidpath) if -d $vidpath;
-
-  my $days = camparam($camera, 'RetentionPeriod');
 
   find(sub { unlink if -f && -M > $days; }, @paths);
 }
@@ -181,6 +207,7 @@ my %default_config = (
 #print Dumper(\%config);
 
 my @cameras = ( );
+
 if (scalar(@ARGV)) {
   push(@cameras, @ARGV);
 } else {

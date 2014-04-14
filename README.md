@@ -60,6 +60,7 @@ device.
 * ClipAudioCodec - The ffmpeg audio codec to use when encoding a clip (default: copy).
 * ClipFileType - The file type for saving video clips (default: mov).
 * FileNameFormat - The name format used to save files to the NVR storage (default: %Y%m%d%H%M%S).
+* RetentionPeriod - The number of days to keep files around (default: 30).
 * ImageRootDir - The base path for storing images (default: current directory).
 * VideoRootDir - The base path for storing videos (default: current directory).
 * TempDir - A location for storing temporary files (default: system defined).
