@@ -97,7 +97,8 @@ sub do_clip {
   my ($camera) = @_;
 
   my $namef = camparam($camera, 'FileNameFormat');
-  my $filename = $tstamp->strftime($namef) . '.mov';
+  my $suffix = camparam($camera, 'ClipFileType');
+  my $filename = $tstamp->strftime($namef) . '.' . $suffix;
 
   my $viddir = camparam($camera, 'VideoRootDir');
   my $vidfile = File::Spec->catfile($viddir, $camera, $filename);
