@@ -5,9 +5,7 @@ use Config::General;
 use Data::Dumper;
 use DateTime;
 use File::Spec;
-use File::Copy;
 use File::Basename;
-use File::Path;
 use Getopt::Long;
 
 # some globals we'll use later
@@ -32,6 +30,9 @@ EOF
 
 #-------------------------------------------------------------------------------
 sub deploy {
+  use File::Path;
+  use File::Copy;
+
   my ($source, $dest) = @_;
 
   mkpath(dirname($dest));
@@ -48,6 +49,7 @@ sub camparam {
 #-------------------------------------------------------------------------------
 sub download {
   use LWP::Simple;
+
   my ($url, $file) = @_;
 
   my $status = getstore($url, $file);
@@ -107,12 +109,12 @@ sub do_clip {
   my $tmpfile = File::Spec->catfile($tmpdir, $filename);
 
   my $stream = camparam($camera, 'StreamURL');
+  my $length = camparam($camera, 'ClipDuration');
   my $acodec = camparam($camera, 'ClipVideoCodec');
   my $vcodec = camparam($camera, 'ClipAudioCodec');
-  my $duration = camparam($camera, 'ClipDuration');
 
   # let ffmpeg do the heavy lifting
-  ffmpeg('-t', $duration, '-i', $stream,
+  ffmpeg('-t', $length, '-i', $stream,
     '-vcodec', $vcodec, '-acodec', $acodec,
     $tmpfile
   );
@@ -122,7 +124,23 @@ sub do_clip {
 
 #-------------------------------------------------------------------------------
 sub do_prune {
+  use File::Find;
+
   my ($camera) = @_;
+
+  my @paths = ( );
+
+  my $imgdir = camparam($camera, 'ImageRootDir');
+  my $imgpath = File::Spec->catfile($imgdir, $camera);
+  push(@paths, $imgpath) if -d $imgpath;
+
+  my $viddir = camparam($camera, 'VideoRootDir');
+  my $vidpath = File::Spec->catfile($viddir, $camera);
+  push(@paths, $vidpath) if -d $vidpath;
+
+  my $days = camparam($camera, 'RetentionPeriod');
+
+  find(sub { unlink if -f && -M > $days; }, @paths);
 }
 
 #===============================================================================
@@ -142,6 +160,7 @@ GetOptions(
 ) || usage(1);
 
 my %default_config = (
+  RetentionPeriod => '30',
   ClipDuration => '01:00:00',
   ClipVideoCodec => 'copy',
   ClipAudioCodec => 'copy',
@@ -174,6 +193,6 @@ foreach my $camera (@cameras) {
   do_snap($camera) if $do_snap;
   do_clip($camera) if $do_clip;
 
-  #do_prune($camera) if $do_prune;
+  do_prune($camera) if $do_prune;
 }
 
