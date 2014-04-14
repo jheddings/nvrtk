@@ -46,7 +46,7 @@ Configuration
 =============
 
 Configuration is a bit tricky...  Need to explain it more here.  In general, it is an
-Apache-style config file with global options and sections.
+Apache-style config file.  See the included sample for a quick start.
 
 Global Options
 --------------
@@ -57,6 +57,7 @@ device.
 * ClipDuration - Specifies the length of time to capture from a stream (default: 1 hour)
 * ClipVideoCodec - The ffmpeg video codec to use when encoding a clip (default: copy).
 * ClipAudioCodec - The ffmpeg audio codec to use when encoding a clip (default: copy).
+* ClipFileType - The file type for saving video clips (default: mov).
 * FileNameFormat - The name format used to save files to the NVR storage (default: %Y%m%d%H%M%S).
 * ImageRootDir - The base path for storing images (default: current directory).
 * VideoRootDir - The base path for storing videos (default: current directory).
