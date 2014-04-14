@@ -24,7 +24,7 @@ where options include:
   --snap        : get current snapshot from camera
   --clip        : record next clip from camera
   --prune       : prune old files according to config
-  --help        : display help and exit
+  --help        : display this help and exit
 EOF
 
   exit (shift || 0);
@@ -53,7 +53,7 @@ sub download {
   my $status = getstore($url, $file);
 
   if (! is_success($status)) {
-    warn "error downloading file: $status";
+    warn "error downloading file: $status - $!";
   }
 }
 
@@ -129,9 +129,9 @@ sub do_prune {
 # MAIN APPLICATION ENTRY
 
 my $cfg_file = 'nvrtk.cfg';
-my $do_snap = '';
-my $do_clip = '';
-my $do_prune = '';
+my $do_snap = 0;
+my $do_clip = 0;
+my $do_prune = 0;
 
 GetOptions(
   'conf=s' => \$cfg_file,
@@ -145,20 +145,20 @@ my %default_config = (
   ClipDuration => '01:00:00',
   ClipVideoCodec => 'copy',
   ClipAudioCodec => 'copy',
+  ClipFileType => 'mov',
   FileNameFormat => '%Y%m%d%H%M%S',
   TempDir => File::Spec->tmpdir()
 );
 
-my $cfgr = Config::General->new(
+%config = Config::General->new(
   -ConfigFile => $cfg_file,
-  -DefaultConfig => \%default_config,
   -MergeDuplicateOptions => 1,
   -UseApacheInclude => 1,
   -IncludeDirectories => 1,
   -IncludeGlob => 1,
-  -IncludeRelative => 1
-) || die 'invalid config file';
-%config = $cfgr->getall;
+  -IncludeRelative => 1,
+  -DefaultConfig => \%default_config
+)->getall;
 #print Dumper(\%config);
 
 my @cameras = ( );

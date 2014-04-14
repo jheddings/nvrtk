@@ -4,7 +4,8 @@ nvrtk
 A very basic NVR toolkit for recording IP video cameras at home.  This is not intended to
 function like standard video surveillance application by providing search & playback
 capability.  Instead, this toolkit simply captures clips & stills from cameras defined in
-the configuration.
+the configuration.  In truth, it is basically a wrapper around ffmpeg with some utilities
+for processing config files in a particular way.
 
 This toolkit is designed to work with the system scheduler (e.g. cron) to launch tasks at
 specific intervals.  For example, to record a one-hour clip from your cameras, launch
