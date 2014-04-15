@@ -1,4 +1,4 @@
 # nvrtk jobs - run at staggered intervals to reduce resource competition
-*  *  * * * /usr/local/bin/nvrtk.pl --conf=/etc/nvrtk.cfg --snap
-30 *  * * * /usr/local/bin/nvrtk.pl --conf=/etc/nvrtk.cfg --clip
-42 16 * * * /usr/local/bin/nvrtk.pl --conf=/etc/nvrtk.cfg --prune
+*  *  *  *  *  /usr/local/bin/nvrtk.pl --conf=/etc/nvrtk.cfg --snap
+30 *  *  *  *  /usr/local/bin/nvrtk.pl --conf=/etc/nvrtk.cfg --clip
+42 16 *  *  *  /usr/local/bin/nvrtk.pl --conf=/etc/nvrtk.cfg --prune
