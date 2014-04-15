@@ -28,20 +28,6 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
-sub camparam {
-  return unless defined wantarray;
-
-  my $camera = shift;
-  my @params = ( );
-
-  foreach my $key (@_) {
-    push(@params, $config{Camera}{$camera}{$key} || $config{$key});
-  }
-
-  return (wantarray) ? @params : $params[0];
-}
-
-#-------------------------------------------------------------------------------
 sub camconfig {
   my $camera = shift;
   my (%params) = @_;
@@ -49,6 +35,15 @@ sub camconfig {
   foreach (keys %params) {
     ${$params{$_}} = $config{Camera}{$camera}{$_} || $config{$_};
   }
+}
+
+#-------------------------------------------------------------------------------
+sub tempfile {
+  use File::Temp;
+
+  my (undef, $tmpfile) = File::Temp::tempfile(DIR => $config{TempDir}, @_);
+
+  return $tmpfile;
 }
 
 #-------------------------------------------------------------------------------
@@ -89,19 +84,18 @@ sub ffmpeg {
 sub do_snap {
   my ($camera) = @_;
 
-  my ($namef, $imgdir, $imgurl, $stream, $tmpdir);
+  my ($namef, $imgdir, $imgurl, $stream);
 
   camconfig($camera,
     'FileNameFormat' => \$namef,
     'ImageURL' => \$imgurl,
     'StreamURL' => \$stream,
-    'ImageRootDir' => \$imgdir,
-    'TempDir' => \$tmpdir
+    'ImageRootDir' => \$imgdir
   );
 
   my $filename = $tstamp->strftime($namef) . '.jpg';
   my $imgfile = File::Spec->catfile($imgdir, $camera, $filename);
-  my $tmpfile = File::Spec->catfile($tmpdir, $filename);
+  my $tmpfile = tempfile(SUFFIX => '.jpg');
 
   if ($imgurl) {
     download($imgurl, $tmpfile);
@@ -118,22 +112,22 @@ sub do_snap {
 sub do_clip {
   my ($camera) = @_;
 
-  my ($namef, $suffix, $viddir, $stream, $length, $acodec, $vcodec, $tmpdir);
+  my ($namef, $type, $viddir, $stream, $length, $acodec, $vcodec);
 
   camconfig($camera,
     'FileNameFormat' => \$namef,
-    'ClipFileType' => \$suffix,
+    'ClipFileType' => \$type,
     'ClipDuration' => \$length,
     'ClipAudioCodec' => \$acodec,
     'ClipVideoCodec' => \$vcodec,
     'StreamURL' => \$stream,
-    'VideoRootDir' => \$viddir,
-    'TempDir' => \$tmpdir
+    'VideoRootDir' => \$viddir
   );
 
-  my $filename = $tstamp->strftime($namef) . '.' . $suffix;
+  my $suffix = ".$type";
+  my $filename = $tstamp->strftime($namef) . $suffix;
   my $vidfile = File::Spec->catfile($viddir, $camera, $filename);
-  my $tmpfile = File::Spec->catfile($tmpdir, $filename);
+  my $tmpfile = tempfile(SUFFIX => $suffix);
 
   # let ffmpeg do the heavy lifting
   ffmpeg('-t', $length, '-i', $stream,

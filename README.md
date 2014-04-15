@@ -65,6 +65,8 @@ device.
 * VideoRootDir - The base path for storing videos (default: current directory).
 * TempDir - A location for storing temporary files (default: system defined).
 
+It is possible to use path separators in `FileNameFormat` to create directory structures.
+
 Camera Section
 --------------
 
