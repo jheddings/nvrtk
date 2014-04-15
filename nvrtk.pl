@@ -28,6 +28,17 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
+sub camparam {
+  return undef unless defined wantarray;
+
+  my $camera = shift;
+
+  my @params = map { $config{Camera}{$camera}{$_} || $config{$_} } @_;
+
+  return (wantarray) ? @params : $params[0];
+}
+
+#-------------------------------------------------------------------------------
 sub camconfig {
   my $camera = shift;
   my (%params) = @_;
@@ -38,10 +49,42 @@ sub camconfig {
 }
 
 #-------------------------------------------------------------------------------
+sub get_imgpath {
+  my ($camera, $filename) = @_;
+
+  my $imgroot = camparam($camera, 'ImageRootDir');
+
+  my $path = File::Spec->catfile($imgroot, $camera);
+
+  if ($filename) {
+    $path = File::Spec->catfile($path, $filename);
+  }
+
+  return $path;
+}
+
+#-------------------------------------------------------------------------------
+sub get_vidpath {
+  my ($camera, $filename) = @_;
+
+  my $vidroot = camparam($camera, 'VideoRootDir');
+
+  my $path = File::Spec->catfile($vidroot, $camera);
+
+  if ($filename) {
+    $path = File::Spec->catfile($path, $filename);
+  }
+
+  return $path;
+}
+
+#-------------------------------------------------------------------------------
 sub tempfile {
   use File::Temp;
 
-  my (undef, $tmpfile) = File::Temp::tempfile(DIR => $config{TempDir}, @_);
+  my $tmpdir = $config{TempDir};
+
+  my (undef, $tmpfile) = File::Temp::tempfile(DIR => $tmpdir, @_);
 
   return $tmpfile;
 }
@@ -84,17 +127,16 @@ sub ffmpeg {
 sub do_snap {
   my ($camera) = @_;
 
-  my ($namef, $imgdir, $imgurl, $stream);
+  my ($namef, $imgurl, $stream);
 
   camconfig($camera,
     'FileNameFormat' => \$namef,
     'ImageURL' => \$imgurl,
-    'StreamURL' => \$stream,
-    'ImageRootDir' => \$imgdir
+    'StreamURL' => \$stream
   );
 
   my $filename = $tstamp->strftime($namef) . '.jpg';
-  my $imgfile = File::Spec->catfile($imgdir, $camera, $filename);
+  my $imgfile = get_imgpath($camera, $filename);
   my $tmpfile = tempfile(SUFFIX => '.jpg');
 
   if ($imgurl) {
@@ -112,7 +154,7 @@ sub do_snap {
 sub do_clip {
   my ($camera) = @_;
 
-  my ($namef, $type, $viddir, $stream, $length, $acodec, $vcodec);
+  my ($namef, $type, $stream, $length, $acodec, $vcodec);
 
   camconfig($camera,
     'FileNameFormat' => \$namef,
@@ -120,13 +162,12 @@ sub do_clip {
     'ClipDuration' => \$length,
     'ClipAudioCodec' => \$acodec,
     'ClipVideoCodec' => \$vcodec,
-    'StreamURL' => \$stream,
-    'VideoRootDir' => \$viddir
+    'StreamURL' => \$stream
   );
 
   my $suffix = ".$type";
   my $filename = $tstamp->strftime($namef) . $suffix;
-  my $vidfile = File::Spec->catfile($viddir, $camera, $filename);
+  my $vidfile = get_vidpath($camera, $filename);
   my $tmpfile = tempfile(SUFFIX => $suffix);
 
   # let ffmpeg do the heavy lifting
@@ -144,23 +185,17 @@ sub do_prune {
 
   my ($camera) = @_;
 
-  my ($imgdir, $viddir, $days);
-
-  camconfig($camera,
-    'ImageRootDir' => \$imgdir,
-    'VideoRootDir' => \$viddir,
-    'RetentionPeriod' => \$days
-  );
+  my $days = camparam($camera, 'RetentionPeriod');
 
   my @paths = ( );
 
-  my $imgpath = File::Spec->catfile($imgdir, $camera);
+  my $imgpath = get_imgpath($camera);
   push(@paths, $imgpath) if -d $imgpath;
 
-  my $vidpath = File::Spec->catfile($viddir, $camera);
+  my $vidpath = get_vidpath($camera);
   push(@paths, $vidpath) if -d $vidpath;
 
-  # caution: epic perl one-liner ahead...
+  # caution: epic perl one-liner ahead...  remove empty dirs and old files
   finddepth(sub { (-d && rmdir) || (-f && -M > $days && unlink); }, @paths);
 }
 
