@@ -160,7 +160,8 @@ sub do_prune {
   my $vidpath = File::Spec->catfile($viddir, $camera);
   push(@paths, $vidpath) if -d $vidpath;
 
-  find(sub { unlink if -f && -M > $days; }, @paths);
+  # caution: epic perl one-liner ahead...
+  finddepth(sub { (-d && rmdir) || (-f && -M > $days && unlink); }, @paths);
 }
 
 #===============================================================================
