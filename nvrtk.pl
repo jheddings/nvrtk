@@ -7,6 +7,8 @@ use DateTime;
 use File::Spec;
 use Getopt::Long;
 
+# TODO add locking per operation / camera (block or return?)
+
 # some globals we'll use later
 my %config;
 my $tstamp = DateTime->now;
