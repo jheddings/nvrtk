@@ -55,6 +55,7 @@ sub get_imgpath {
   my ($camera, $filename) = @_;
 
   my $imgroot = camparam($camera, 'ImageRootDir');
+  return undef unless -d $imgroot;
 
   my $path = File::Spec->catfile($imgroot, $camera);
 
@@ -70,6 +71,7 @@ sub get_vidpath {
   my ($camera, $filename) = @_;
 
   my $vidroot = camparam($camera, 'VideoRootDir');
+  return undef unless -d $vidroot;
 
   my $path = File::Spec->catfile($vidroot, $camera);
 
@@ -138,7 +140,6 @@ sub do_snap {
   );
 
   my $filename = $tstamp->strftime($namef) . '.jpg';
-  my $imgfile = get_imgpath($camera, $filename);
   my $tmpfile = tempfile(SUFFIX => '.jpg');
 
   if ($imgurl) {
@@ -147,7 +148,8 @@ sub do_snap {
     ffmpeg('-i', $stream, '-vframes', 1, $tmpfile);
   }
 
-  deploy($tmpfile, $imgfile);
+  my $imgfile = get_imgpath($camera, $filename);
+  deploy($tmpfile, $imgfile) if $imgfile;
 
   # TODO update current.jpg (symlink?) to new snapshot
 }
@@ -169,7 +171,6 @@ sub do_clip {
 
   my $suffix = ".$type";
   my $filename = $tstamp->strftime($namef) . $suffix;
-  my $vidfile = get_vidpath($camera, $filename);
   my $tmpfile = tempfile(SUFFIX => $suffix);
 
   # let ffmpeg do the heavy lifting
@@ -178,7 +179,8 @@ sub do_clip {
     $tmpfile
   );
 
-  deploy($tmpfile, $vidfile);
+  my $vidfile = get_vidpath($camera, $filename);
+  deploy($tmpfile, $vidfile) if $vidfile;
 }
 
 #-------------------------------------------------------------------------------
