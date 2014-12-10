@@ -150,6 +150,7 @@ sub do_snap {
 
   my $imgfile = get_imgpath($camera, $filename);
   deploy($tmpfile, $imgfile) if $imgfile;
+  unlink($tmpfile) if -f $tmpfile;
 
   # TODO update current.jpg (symlink?) to new snapshot
 }
@@ -181,6 +182,7 @@ sub do_clip {
 
   my $vidfile = get_vidpath($camera, $filename);
   deploy($tmpfile, $vidfile) if $vidfile;
+  unlink($tmpfile) if -f $tmpfile;
 }
 
 #-------------------------------------------------------------------------------
